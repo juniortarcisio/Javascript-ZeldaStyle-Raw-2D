@@ -1,0 +1,31 @@
+﻿body 
+{
+    background-color:#556655;
+}
+ 
+/*--------------------------- Elementos Genéricos ---------------------------*/
+
+
+
+/*--------------------------- Elementos específicos -------------------------*/
+
+#divGame 
+{
+    position:relative;
+    margin:auto;
+    width: 900px;
+}
+
+#myCanvas 
+{
+    margin:auto;
+    margin-top:50px;
+    border-radius: 15px;
+    border-top:2px solid #88E469;
+	border-left:2px solid #88E469;
+	border-right:2px solid #569434;
+	border-bottom:2px solid #338422;
+    box-shadow: 8px 8px 20px #223322;
+    background-image:url('grass.jpg');
+    cursor:pointer;
+}
