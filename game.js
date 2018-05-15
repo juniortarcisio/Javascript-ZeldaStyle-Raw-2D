@@ -1,12 +1,81 @@
-﻿var game;
+/* Game HP script by junior.tarcisio 2014 */
+var game;
 var player;
-var sounds = new Array();
-sounds[0] = new Audio('jump.mp3');
-
 var CONS_SPRITE_SIZE = 3;
 
+var pointer = new Object();
+pointer.active = false;
+pointer.x = 0;
+pointer.y = 0;
+pointer.ax = 0;
+pointer.ay = 0;
 
+cancelMasterAnimations = true;
+
+var map = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 0, 0, 5, 5, 1, 1, 1, 5, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 6, 0, 5, 1, 1, 5, 0, 0, 5, 0, 0, 1, 1, 1, 1, 1, 1],
+    [1, 0, 6, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 6, 0, 5, 0, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 6, 0, 7, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+    [1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 5, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 7, 0, 5, 1],
+    [1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 0, 0, 6, 0, 2, 2, 2, 3, 4, 0, 0, 0, 6, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 0, 0, 0, 2, 3, 3, 3, 3, 0, 6, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 0, 0, 3, 3, 4, 3, 4, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 1, 1],
+    [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 1, 1, 1, 1, 0, 0, 6, 0, 0, 6, 0, 0, 5, 0, 6, 0, 0, 1, 1, 1],
+    [1, 1, 1, 1, 1, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 5, 0, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+];
+
+//TODO: create single spr file with partial selecion (index*xpto_pixels)
+var spriteList = [];
+spriteList[0] = new Image;
+spriteList[0].src = "spr0_grass.png";
+
+spriteList[1] = new Image;
+spriteList[1].src = "spr1_water.png";
+
+spriteList[2] = new Image;
+spriteList[2].src = "spr2_water.png";
+
+//Under development tile system
+var spriteTable = new Image;
+spriteTable.src = "spriteTable.png";
+
+function Tile(_name, _blockable, _frames) {
+    this.name = _name;
+    this.blockable = _blockable;
+    this.frames = _frames;
+    this.currentFrame = 0;
+    this.frameTimer = Date.now();
+}
+
+var tiles = [];
+tiles[0] = new Tile("grass", false, [0]);
+tiles[1] = new Tile("water", true, [1, 2]);
+tiles[2] = new Tile("floor", false, [3]);
+tiles[3] = new Tile("floor", false, [4]);
+tiles[4] = new Tile("floor", false, [5]);
+tiles[5] = new Tile("stone", true, [6]);
+tiles[6] = new Tile("grass", false, [7]);
+tiles[7] = new Tile("fire", true, [8, 9]);
+
+//function GetMapTile(x, y) {
+//    return tiles[map[x, y]];
+//}
+
+/* Load compatible */
 $(document).ready(function () {
+    if (!document.getElementById("myCanvas").getContext) {
+        return;
+    }
+
     game = new Game();
     game.start();
 
@@ -22,7 +91,7 @@ $(document).ready(function () {
     });
 });
 
-var TO_RADIANS = Math.PI / 180; 
+var TO_RADIANS = Math.PI / 180;
 function drawRotatedImage(image, x, y, angle) {
     // save the current co-ordinate system 
     // before we screw with it
@@ -44,20 +113,39 @@ function drawRotatedImage(image, x, y, angle) {
 }
 
 
-function canvas_OnClick(e) {
-    var clickAcceleration = 10;
+function canvas_MouseDown(e) {
+    pointer.active = true;
 
-    if (e.offsetX < (player.pos.x))
-        player.velocity.x -= clickAcceleration + ((player.pos.x - e.offsetX) / 10);
-    else if (e.offsetX > (player.pos.x + player.img.width))
-        player.velocity.x += clickAcceleration + ((e.offsetX - player.pos.x) / 10);
+    pointer.x = Math.floor(e.offsetX / 72) - 5;
+    pointer.y = Math.floor(e.offsetY / 72) - 4;
 
-    if (e.offsetY < (player.pos.y))
-        player.velocity.y -= clickAcceleration + ((player.pos.y - e.offsetY) / 8);
-    else if (e.offsetY > (player.pos.y + player.img.height))
-        player.velocity.y += clickAcceleration + ((e.offsetY - player.pos.y) / 8);
+    pointer.ax = player.pos.x + pointer.x;
+    pointer.ay = player.pos.y + pointer.y;
+
+    var p = new Object();
+    p.x = pointer.ax;
+    p.y = pointer.ay;
+
+    game.addComponent(new MagicEffect(p));
+
+    DebugClear();
+    DebugWrite("player.x: " + player.pos.x.toString());
+    DebugWrite("player.y: " + player.pos.y.toString());
+    DebugWrite("pos.x: " + pos.x.toString());
+    DebugWrite("pos.y: " + pos.y.toString());
 }
 
+//function canvas_MouseUp(e) {
+//    pointer.pressed = false;
+//}
+
+//function canvas_MouseMove(e) {
+//    if (pointer.pressed) {
+//        pointer.active = true;
+//        pointer.x = e.offsetX;
+//        pointer.y = e.offsetY;
+//    }
+//}
 
 /* Game Class --------------------------------------------------------------------------------------------- */
 
@@ -73,11 +161,16 @@ function Game() {
 
     this.keys = [];
     this.componentList = [];
+
+    this.drawX;
+    this.drawY;
 }
 
 Game.prototype.start = function () {
     player = new Player();
     this.addComponent(player);
+
+    this.canvas.addEventListener("click", canvas_MouseDown, false);
 
     this.update();
 }
@@ -101,35 +194,163 @@ Game.prototype.update = function (c) {
             game.componentList[i].draw();
     }
 
-    game.pSetTimeout = window.setTimeout("game.update()", 16); 
+    game.pSetTimeout = window.setTimeout("game.update()", 16); //~60 ciclos per sec
 }
 
 Game.prototype.EndGame = function () {
     window.clearTimeout(pSetTimeout);
 }
 
-
 Game.prototype.ElapsedTime = function () {
-    return Math.ceil((Date.now() - this.startTime)/1000);
+    return Math.ceil((Date.now() - this.startTime) / 1000);
 }
 
 Game.prototype.TimeLeft = function () {
     return 30 - this.ElapsedTime();
 }
 
+var tileTimer = Date.now();
+var tileFrame = 1;
+
 Game.prototype.draw = function (c) {
     game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
     game.ctx.beginPath();
     game.ctx.stroke();
+
+    //Map draw -> createClass to handlermap.
+
+    this.drawX = 24 * CONS_SPRITE_SIZE;
+    this.drawY = 24 * CONS_SPRITE_SIZE;
+
+    //Get moving percent to screen
+    if (player.movingTo != null && player.movingPercent != null) {
+        switch (player.movingTo) {
+            case CONST_MOVING_TO_LEFT:
+                this.drawX -= (24 * CONS_SPRITE_SIZE) * (player.movingPercent / 100);
+                break;
+            case CONST_MOVING_TO_UP:
+                this.drawY += (24 * CONS_SPRITE_SIZE) * (player.movingPercent / 100);
+                break;
+            case CONST_MOVING_TO_RIGHT:
+                this.drawX += (24 * CONS_SPRITE_SIZE) * (player.movingPercent / 100);
+                break;
+            case CONST_MOVING_TO_DOWN:
+                this.drawY -= (24 * CONS_SPRITE_SIZE) * (player.movingPercent / 100);
+                break;
+        }
+    }
+
+    var tileID;
+    var tile;
+
+    //draw tile by tile
+    for (var i = -1; i < 10; i++) {
+        for (var j = -1; j < 12; j++) {
+
+            //if position invalid in map array threat as water tile (1)
+            if (typeof map[i + player.pos.y - 4] == "undefined")
+                tileID = 1;
+
+            else if (typeof map[i + player.pos.y - 4][j + player.pos.x - 5] == "undefined")
+                tileID = 1;
+            else
+                tileID = map[i + player.pos.y - 4][j + player.pos.x - 5];
+
+            tile = tiles[tileID];
+
+            if (tile.frames.length > 1) {
+                if (Date.now() - tile.frameTimer > 500) {
+                    tile.frameTimer = Date.now();
+
+                    if (tile.currentFrame < tile.frames.length - 1)
+                        tile.currentFrame++;
+                    else
+                        tile.currentFrame = 0;
+                }
+            }
+
+            game.ctx.drawImage(spriteTable,
+                1,
+                tile.frames[tile.currentFrame] * 24 + 1, //fucking bug on resizing sprite table UPPER/BOTTOM tile mixing 1px with current TILE on resize
+                22,
+                22, //fucking bug on resizing sprite table
+                j * 24 * CONS_SPRITE_SIZE - this.drawX + 72,
+                i * 24 * CONS_SPRITE_SIZE - this.drawY + 72,
+                24 * CONS_SPRITE_SIZE,
+                24 * CONS_SPRITE_SIZE);
+
+            //Debugging tiles x, y
+            if (debugMode) {
+                game.ctx.font = "13px Calibri";
+                game.ctx.fillText((j + player.pos.x - 5).toString() + "-" + (i + player.pos.y - 4).toString(),
+                    j * 24 * CONS_SPRITE_SIZE - this.drawX + 72 + 27,
+                    i * 24 * CONS_SPRITE_SIZE - this.drawY + 36 + 75);
+
+                game.ctx.rect(j * 24 * CONS_SPRITE_SIZE - this.drawX + 72,
+                              i * 24 * CONS_SPRITE_SIZE - this.drawY + 72,
+                              72,
+                              72);
+                game.ctx.stroke();
+            }
+
+            //game.ctx.beginPath();
+            //game.ctx.arc(j * 24 * CONS_SPRITE_SIZE - drawX + 72 + 37, 
+            //             i * 24 * CONS_SPRITE_SIZE - drawY + 36 + 72,
+            //             30, 0, 2 * Math.PI);
+            //game.ctx.stroke();
+        }
+    }
+
+
+    if (pointer.active) {
+        //DebugClear();
+        //DebugWrite("pointer.x: " + (pointer.x + 5).toString())
+        //DebugWrite("pointer.y: " + (pointer.y + 4).toString())
+        //game.ctx.rect(
+        //              (pointer.ax - player.pos.x + 5) * 72 - this.drawX + 72,
+        //              (pointer.ay - player.pos.y + 4) * 72 - this.drawY + 72,
+        //              72,
+        //              72);
+        //game.ctx.stroke();
+
+        game.ctx.beginPath();
+        game.ctx.arc((pointer.ax - player.pos.x + 5) * 72 - this.drawX + 72 + 37,
+                     (pointer.ay - player.pos.y + 4) * 72 - this.drawY + 72 + 36,
+                     10, 0, 2 * Math.PI);
+        game.ctx.fillStyle = '#ee3333';
+        game.ctx.fill();
+        game.ctx.lineWidth = 2;
+        game.ctx.strokeStyle = '#ff6666';
+        game.ctx.stroke();
+    }
+
+    if (debugMode) {
+        DebugClear();
+        DebugWrite("player.pos x:" + player.pos.x.toString() + " y:" + player.pos.y.toString());
+        DebugWrite("player.speed: " + player.speed);
+    }
 }
 
+var debugMode = false;
+function DebugWrite(text) {
+    $("#debugger").append(text + "<br/>");
+}
+
+function DebugClear() {
+    $("#debugger").text("");
+}
 
 /* Player Class ------------------------------------------------------------------------------------ */
 
+var CONST_MOVING_TO_LEFT = 0;
+var CONST_MOVING_TO_UP = 1;
+var CONST_MOVING_TO_RIGHT = 2;
+var CONST_MOVING_TO_DOWN = 3;
+
 function Player() {
     this.pos = new Object();
-    this.pos.x = new Number(50);
-    this.pos.y = new Number(420);
+    this.pos.x = new Number(5);
+    this.pos.y = new Number(4);
 
     this.frames = [];
     this.frames[0] = new Image;
@@ -141,79 +362,147 @@ function Player() {
     this.frames[2] = new Image;
     this.frames[2].src = "player_02.png";
     this.currentFrame = 0;
-    this.frameTimer = Date.now();
+    this.frameTimer = 0;
 
     this.img = this.frames[0];
 
-    this.velocity = new Object();
-    this.velocity.x = 0;
-    this.velocity.y = 0;
-    this.velocity.friction = 0.90;
-    this.velocity.maxspeed = 10;
-    this.velocity.acceleration = 0.25;
+    this.speed = 60;
+    this.movingTo = null;
+    this.movingPercent = null;
 
     this.alive = true
 }
 
-
 Player.prototype.update = function () {
 
-    if (game.keys[40] && this.velocity.y < this.velocity.maxspeed)
-        this.velocity.y = this.velocity.y + this.velocity.acceleration;
+    //apply key command
+    if (this.movingTo == null) {
+        if (game.keys[37])
+            this.movingTo = CONST_MOVING_TO_LEFT;
 
-    if (game.keys[39] && this.velocity.x < this.velocity.maxspeed)
-        this.velocity.x = this.velocity.x + this.velocity.acceleration;
+        else if (game.keys[40])
+            this.movingTo = CONST_MOVING_TO_UP;
 
-    if (game.keys[37] && this.velocity.x > -this.velocity.maxspeed)
-        this.velocity.x = this.velocity.x - this.velocity.acceleration;
+        else if (game.keys[39])
+            this.movingTo = CONST_MOVING_TO_RIGHT;
 
-    if (game.keys[38] && this.velocity.y > -this.velocity.maxspeed)
-        this.velocity.y = this.velocity.y - this.velocity.acceleration;
+        else if (game.keys[38])
+            this.movingTo = CONST_MOVING_TO_DOWN;
 
-    // apply friction
-    this.velocity.y *= this.velocity.friction;
-    this.pos.y += this.velocity.y;
-
-    this.velocity.x *= this.velocity.friction;
-    this.pos.x += this.velocity.x;
-
-    // apply moviment
-    if (this.pos.y < 0)
-        this.pos.y = 0;
-    else if (this.pos.y > game.canvas.height - this.img.height * CONS_SPRITE_SIZE) //game.canvas.height - this.img.height)
-        this.pos.y = game.canvas.height - this.img.height * CONS_SPRITE_SIZE; //game.canvas.height - this.img.height;
-
-    if (this.pos.x < 0)
-        this.pos.x = 0;
-    else if (this.pos.x >= game.canvas.width - this.img.width * CONS_SPRITE_SIZE)
-        this.pos.x = game.canvas.width - this.img.width * CONS_SPRITE_SIZE;
-
-    //Apply frames
-    if (Date.now() - this.frameTimer > 70) {
-        this.frameTimer = Date.now();
-        if (this.velocity.y > 1 || this.velocity.x > 1 ||
-            this.velocity.y < -1 || this.velocity.x < -1) {
-            this.currentFrame++;
-
-            if (this.currentFrame > 2)
-                this.currentFrame = 0;
-
-            this.img = this.frames[this.currentFrame];
-        }
-        else {
-            this.img = this.frames[0];
+        if (this.movingTo != null) {
+            this.movingPercent = 0;
+            pointer.active = false; //desativa o ponteiro caso seja pressionada uma tecla
         }
     }
+
+    //TODO: pathfind depois, tem que ser leve
+    if (pointer.active && this.movingTo == null) {
+
+        if (pointer.x < 0) {
+            this.movingTo = CONST_MOVING_TO_LEFT;
+            pointer.x++;
+        }
+        else if (pointer.x > 0) {
+            this.movingTo = CONST_MOVING_TO_RIGHT;
+            pointer.x--;
+        }
+        else if (pointer.y < 0) {
+            this.movingTo = CONST_MOVING_TO_DOWN;
+            pointer.y++;
+        }
+        else if (pointer.y > 0) {
+            this.movingTo = CONST_MOVING_TO_UP;
+            pointer.y--;
+        }
+
+        if (pointer.x == 0 && pointer.y == 0) {
+            pointer.active = false;
+        }
+    }
+
+    //check block sqm
+    switch (this.movingTo) {
+        case (CONST_MOVING_TO_LEFT):
+            if (tiles[map[this.pos.y][this.pos.x - 1]].blockable)
+                this.movingTo = null;
+            break;
+        case (CONST_MOVING_TO_RIGHT):
+            if (tiles[map[this.pos.y][this.pos.x + 1]].blockable)
+                this.movingTo = null;
+            break;
+        case (CONST_MOVING_TO_UP):
+            if (tiles[map[this.pos.y + 1][this.pos.x]].blockable)
+                this.movingTo = null;
+            break;
+        case (CONST_MOVING_TO_DOWN):
+            if (tiles[map[this.pos.y - 1][this.pos.x]].blockable)
+                this.movingTo = null;
+            break;
+    }
+
+    //apply movement
+    if (this.movingTo != null) {
+
+        this.movingPercent += this.speed / 10;
+
+        if (this.movingPercent >= 100) {
+            switch (this.movingTo) {
+                case CONST_MOVING_TO_LEFT:
+                    this.pos.x--;
+                    break;
+                case CONST_MOVING_TO_UP:
+                    this.pos.y++;
+                    break;
+                case CONST_MOVING_TO_RIGHT:
+                    this.pos.x++;
+                    break;
+                case CONST_MOVING_TO_DOWN:
+                    this.pos.y--;
+                    break;
+            }
+            this.movingTo = null;
+            this.movingPercent = null;
+        }
+    }
+    else {
+        this.movingPercent = null;
+    }
+
+    if (this.movingPercent != null) {
+        if (this.movingPercent < 20)
+            this.currentFrame = 1;
+        else if (this.movingPercent < 40)
+            this.currentFrame = 2;
+        else if (this.movingPercent < 60)
+            this.currentFrame = 0;
+        else if (this.movingPercent < 80)
+            this.currentFrame = 1;
+        else
+            this.currentFrame = 2;
+    }
+    else {
+        this.currentFrame = 0;
+    }
+
+    this.img = this.frames[this.currentFrame];
+
 }
 
 Player.prototype.draw = function () {
-    game.ctx.drawImage(this.img, this.pos.x, this.pos.y, this.img.width * CONS_SPRITE_SIZE, this.img.height * CONS_SPRITE_SIZE);
+
+    game.ctx.drawImage(this.img,
+        5 * 24 * CONS_SPRITE_SIZE,
+        4 * 24 * CONS_SPRITE_SIZE,
+        this.img.width * CONS_SPRITE_SIZE,
+        this.img.height * CONS_SPRITE_SIZE);
+
+
 }
 
 
 /* Magic Effect Class ------------------------------------------------------------------------------------ */
 
-function MagicEffect(position) { 
+function MagicEffect(position) {
     this.pos = new Object();
     this.pos.x = position.x;
     this.pos.y = position.y;
@@ -221,43 +510,37 @@ function MagicEffect(position) {
     this.frames = [];
 
     this.frames[0] = new Image;
-    this.frames[0].src = "player/me_06.png";
+    this.frames[0].src = "blood_05.png";
 
     this.frames[1] = new Image;
-    this.frames[1].src = "player/me_05.png";
+    this.frames[1].src = "blood_04.png";
 
     this.frames[2] = new Image;
-    this.frames[2].src = "player/me_04.png";
+    this.frames[2].src = "blood_03.png";
 
     this.frames[3] = new Image;
-    this.frames[3].src = "player/me_03.png";
+    this.frames[3].src = "blood_02.png";
 
     this.frames[4] = new Image;
-    this.frames[4].src = "player/me_02.png";
+    this.frames[4].src = "blood_01.png";
 
     this.frames[5] = new Image;
-    this.frames[5].src = "player/me_01.png";
+    this.frames[5].src = "blood_00.png";
 
     this.frames[6] = new Image;
-    this.frames[6].src = "player/me_00.png";
+    this.frames[6].src = "blood_01.png";
 
     this.frames[7] = new Image;
-    this.frames[7].src = "player/me_01.png";
+    this.frames[7].src = "blood_02.png";
 
     this.frames[8] = new Image;
-    this.frames[8].src = "player/me_02.png";
+    this.frames[8].src = "blood_03.png";
 
     this.frames[9] = new Image;
-    this.frames[9].src = "player/me_03.png";
+    this.frames[9].src = "blood_04.png";
 
     this.frames[10] = new Image;
-    this.frames[10].src = "player/me_04.png";
-
-    this.frames[11] = new Image;
-    this.frames[11].src = "player/me_05.png";
-
-    this.frames[12] = new Image;
-    this.frames[12].src = "player/me_06.png";
+    this.frames[10].src = "blood_05.png";
 
     this.currentFrame = 0;
     this.angle = 0;
@@ -277,7 +560,12 @@ MagicEffect.prototype.update = function () {
 }
 
 MagicEffect.prototype.draw = function () {
-    if (typeof this.img != "undefined")
-    //drawRotatedImage(this.img, this.pos.x, this.pos.y, this.angle);
-        game.ctx.drawImage(this.img, this.pos.x, this.pos.y);
+
+    if (typeof this.img == "undefined")
+        return;
+
+    game.ctx.drawImage(this.img,
+        (this.pos.x - player.pos.x + 5) * 72 - game.drawX + 72,// - (this.img.width * CONS_SPRITE_SIZE),
+        (this.pos.y - player.pos.y + 4) * 72 - game.drawY + 72,// - (this.img.height * CONS_SPRITE_SIZE),
+        this.img.width * CONS_SPRITE_SIZE, this.img.height * CONS_SPRITE_SIZE);
 }
