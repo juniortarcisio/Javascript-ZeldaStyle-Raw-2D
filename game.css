@@ -1,10 +1,27 @@
-﻿body 
-{
-    background-color:#556655;
-}
- 
-/*--------------------------- Elementos Genéricos ---------------------------*/
 
+/*--------------------------- Elementos Genéricos ---------------------------*/
+body 
+{
+    background-color:#445;
+}
+
+@keyframes title-h1-animation {
+    from { color:white; text-shadow: 0px 3px 5px #8bf; }
+    to {color:#f33; text-shadow: 0px 3px 5px #fb0}
+}
+
+h1 { 
+    padding:0;
+    margin:0;
+    font-size: 22px;
+    text-align: center;
+    color: white;
+    font-family: sans-serif;
+    text-shadow: 0px 2px 2px #8bf;
+    animation-iteration-count: infinite;
+    animation-delay: 5s;
+    animation: title-h1-animation 1s infinite alternate;
+}
 
 
 /*--------------------------- Elementos específicos -------------------------*/
@@ -19,13 +36,37 @@
 #myCanvas 
 {
     margin:auto;
-    margin-top:50px;
-    border-radius: 15px;
+    margin-top:5px;
+    border-radius: 5px;
     border-top:2px solid #88E469;
 	border-left:2px solid #88E469;
 	border-right:2px solid #569434;
-	border-bottom:2px solid #338422;
-    box-shadow: 8px 8px 20px #223322;
+    border-bottom:2px solid #338422;
+    border-color: #777;
+    box-shadow: -1px -1px 1px #fff, 1px 1px 1px #aaa, 8px 8px 16px #000;
     background-image:url('grass.jpg');
     cursor:pointer;
+    outline: none !important;
+}
+
+.message-holder {
+    padding-top:8px;
+    position: fixed;
+    bottom:20px;
+    padding:5px;
+}
+
+.message-holder input {
+    width:700px;
+    border-radius:4px;
+}
+.message-holder button {
+    background-color:#668;
+    border:1px solid gray;
+    padding: 2px 6px;
+    width:80px;
+    border-radius:4px;
+    color:#fff;
+    box-shadow: 3px 3px 14px #000;
+    text-shadow: 0px 1px 0px gray;
 }
