@@ -81,15 +81,40 @@ $(document).ready(function () {
 
     document.body.addEventListener("keydown", function (e) {
         game.keys[e.keyCode] = true;
-        e.preventDefault();
-        return false;
+        var key = e.keyCode || e.which;
+
+        if (key == 13)
+            document.getElementById('message').focus();
+        //e.preventDefault();
+        //return false;
     });
     document.body.addEventListener("keyup", function (e) {
         game.keys[e.keyCode] = false;
-        e.preventDefault();
-        return false;
+        //e.preventDefault();
+        //return false;
     });
+
+    document.getElementById('btn-send').addEventListener("click", speak);
+    document.getElementById('message').addEventListener("keydown", (e) =>{
+        var key = e.keyCode || e.which;
+        if (key == 13)
+            speak();
+    })
 });
+
+var speak = () => {
+    let inputMessage = document.getElementById('message');
+    
+    if (inputMessage.value.length == 0)
+        return;
+
+    speech.pos.x = player.pos.x + 5;
+    speech.pos.y = player.pos.y + 3;
+    speech.msg = 'Player: ' + inputMessage.value;
+    speech.createdAt = new Date();
+
+    inputMessage.value = '';
+}
 
 var TO_RADIANS = Math.PI / 180;
 function drawRotatedImage(image, x, y, angle) {
@@ -128,11 +153,11 @@ function canvas_MouseDown(e) {
 
     game.addComponent(new MagicEffect(p));
 
-    DebugClear();
-    DebugWrite("player.x: " + player.pos.x.toString());
-    DebugWrite("player.y: " + player.pos.y.toString());
-    DebugWrite("pos.x: " + pos.x.toString());
-    DebugWrite("pos.y: " + pos.y.toString());
+    //DebugClear();
+    //DebugWrite("player.x: " + player.pos.x.toString());
+    //DebugWrite("player.y: " + player.pos.y.toString());
+    //DebugWrite("pos.x: " + pos.x.toString());
+    //DebugWrite("pos.y: " + pos.y.toString());
 }
 
 //function canvas_MouseUp(e) {
@@ -279,25 +304,22 @@ Game.prototype.draw = function (c) {
                 24 * CONS_SPRITE_SIZE,
                 24 * CONS_SPRITE_SIZE);
 
+            
             //Debugging tiles x, y
             if (debugMode) {
-                game.ctx.font = "13px Calibri";
+                //game.ctx.font = "13px Calibri";
+                game.ctx.fillStyle = '#000';
                 game.ctx.fillText((j + player.pos.x - 5).toString() + "-" + (i + player.pos.y - 4).toString(),
                     j * 24 * CONS_SPRITE_SIZE - this.drawX + 72 + 27,
                     i * 24 * CONS_SPRITE_SIZE - this.drawY + 36 + 75);
 
-                game.ctx.rect(j * 24 * CONS_SPRITE_SIZE - this.drawX + 72,
-                              i * 24 * CONS_SPRITE_SIZE - this.drawY + 72,
-                              72,
-                              72);
-                game.ctx.stroke();
+                //laggy rect 
+                //game.ctx.rect(j * 24 * CONS_SPRITE_SIZE - this.drawX + 72,
+                //              i * 24 * CONS_SPRITE_SIZE - this.drawY + 72,
+                //              72,
+                //              72);
+                //game.ctx.stroke();
             }
-
-            //game.ctx.beginPath();
-            //game.ctx.arc(j * 24 * CONS_SPRITE_SIZE - drawX + 72 + 37, 
-            //             i * 24 * CONS_SPRITE_SIZE - drawY + 36 + 72,
-            //             30, 0, 2 * Math.PI);
-            //game.ctx.stroke();
         }
     }
 
@@ -324,6 +346,15 @@ Game.prototype.draw = function (c) {
         game.ctx.stroke();
     }
 
+    if (speech && Date.now() - speech.createdAt < 5000) {
+        game.ctx.textAlign="center";
+        game.ctx.font = "18px Calibri";
+        game.ctx.fillStyle = '#ff0';
+        game.ctx.fillText(speech.msg,
+            (speech.pos.x - player.pos.x) * 24 * CONS_SPRITE_SIZE - this.drawX + 72 + 27,
+            (speech.pos.y - player.pos.y) * 24 * CONS_SPRITE_SIZE - this.drawY + 60 + 75);
+    }
+
     if (debugMode) {
         DebugClear();
         DebugWrite("player.pos x:" + player.pos.x.toString() + " y:" + player.pos.y.toString());
@@ -331,7 +362,13 @@ Game.prototype.draw = function (c) {
     }
 }
 
-var debugMode = false;
+var speech = {
+    pos : { x : 10, y : 10 },
+    msg : 'Blablabla bla bla...',
+    createdAt : new Date() + 1
+}
+
+const debugMode = false;
 function DebugWrite(text) {
     $("#debugger").append(text + "<br/>");
 }
@@ -485,7 +522,6 @@ Player.prototype.update = function () {
     }
 
     this.img = this.frames[this.currentFrame];
-
 }
 
 Player.prototype.draw = function () {
